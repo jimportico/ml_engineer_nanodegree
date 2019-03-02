@@ -5,14 +5,15 @@ from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
 
 def BatchWalkForwardCV(df, 
                        n_splits, 
-                       max_train_size, 
+                       max_train_size,
+                       n_iter, 
                        features, 
                        target, 
                        scaler,
                        model,
                        param_grid,
                        verbose=True):
-    """ADD DOCSTRING
+    """ADD DOCSTRING & make number of iterations an input
     """
     n_splits = n_splits
     tscv = TimeSeriesSplit(n_splits=n_splits, max_train_size=max_train_size)
@@ -23,6 +24,7 @@ def BatchWalkForwardCV(df,
     oos_dates = []
     test_score = []
     training_score = []
+    model_results = []
     for index_train, index_test in tscv.split(all_dates):
         
         X = df[features]
@@ -59,16 +61,17 @@ def BatchWalkForwardCV(df,
         params = {"clf__" +k:v for (k,v) in param_grid.items()}
         
         #Fit data and make predictions with tscv
-        iterations = 10
+        iterations = n_iter
         model_searchcv = RandomizedSearchCV(pipe, 
                                             params, 
                                             n_iter=iterations,
                                             scoring=fscore, 
                                             refit=fscore,
-                                            random_state=5
+                                            random_state=5,
+                                            n_jobs=-1
                                             )
         
-        model_searchcv.fit(X_train, y_train.values.ravel())  
+        model_results.append(model_searchcv.fit(X_train, y_train.values.ravel()))
         
         #------------------------------------------------------------------#
         
@@ -108,4 +111,4 @@ def BatchWalkForwardCV(df,
             print("#============================================#")
             print("#============================================#\n")
 
-    return preds, symbols, oos_dates, test_score, training_score
+    return preds, symbols, oos_dates, test_score, training_score, model_results
